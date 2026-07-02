@@ -8,7 +8,7 @@ from twisted.web import proxy, http
 # Ejemplo en GitHub:
 # yona:premium2026
 # user2:clave99
-URL_KEYS_GITHUB = "https://raw.githubusercontent.com/TU_USUARIO/TU_REPO/main/keys.txt"
+URL_KEYS_GITHUB = "https://raw.githubusercontent.com/yonatona/mi-proxy-ff/refs/heads/main/keys.txt"
 
 class SecureProxyRequest(proxy.ProxyRequest):
     def process(self):
