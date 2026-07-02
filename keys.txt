@@ -1,2 +1,2 @@
-yona:premium2026
-ff-user:clave123
+yona:scrypt:32768:8:1$J6bX8v91$e48∅2c67e847c2b512e∅8e6f1fca729d733b8a13a83∅959bb427e∅2df3518e3d
+ff-user:scrypt:32768:8:1$k9vM2p10$d6174b593a28ef∅5b1c9∅a187e5bde829f∅e63bc71441893d5678a1a3e9c8∅f4
