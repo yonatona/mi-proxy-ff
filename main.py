@@ -2,13 +2,10 @@ import base64
 import requests
 from twisted.internet import reactor
 from twisted.web import proxy, http
+from werkzeug.security import check_password_hash
 
-# 1. PEGA AQUÍ TU ENLACE RAW DE GITHUB (donde tienes tus usuarios/keys)
-# El formato dentro de tu keys.txt en GitHub debe ser: usuario:contraseña (uno por línea)
-# Ejemplo en GitHub:
-# yona:premium2026
-# user2:clave99
-URL_KEYS_GITHUB = "https://raw.githubusercontent.com/yonatona/mi-proxy-ff/refs/heads/main/keys.txt"
+# 1. ENLACE RAW DE GITHUB (Apunta a tu archivo claves.txt)
+URL_KEYS_GITHUB = "https://raw.githubusercontent.com/yonatona/mi-proxy-ff/principal/claves.txt"
 
 class SecureProxyRequest(proxy.ProxyRequest):
     def process(self):
@@ -24,32 +21,42 @@ class SecureProxyRequest(proxy.ProxyRequest):
             auth_type, encoded_credentials = auth_header.split(b' ', 1)
             decoded = base64.b64decode(encoded_credentials).decode('utf-8')
             
-            # Descargar la lista de llaves actualizadas desde tu GitHub gratis
+            # Descargar la lista de llaves actualizadas desde tu GitHub
             response = requests.get(URL_KEYS_GITHUB, timeout=5)
             if response.status_code == 200:
                 keys_validas = response.text.splitlines()
-                
-                # Verificar si las credenciales están en tu lista de GitHub
-                if decoded in keys_validas:
-                    # Credenciales correctas -> Permitir el tráfico de internet
-                    return proxy.ProxyRequest.process(self)
-            
-            # Si no coincide o falla la conexión a GitHub, denegar acceso
-            self.denyAccess()
-            
+            else:
+                keys_validas = []
+
+            # Verificar si las credenciales coinciden con algún hash seguro
+            credenciales_validas = False
+            for linea in keys_validas:
+                if ":" in linea:
+                    u_github, hash_github = linea.split(":", 1)
+                    if ":" in decoded:
+                        u_ingresado, pass_ingresado = decoded.split(":", 1)
+                        if u_github.strip() == u_ingresado.strip() and check_password_hash(hash_github.strip(), pass_ingresado.strip()):
+                            credenciales_validas = True
+                            break
+
+            if credenciales_validas:
+                return proxy.ProxyRequest.process(self)
+            else:
+                self.denyAccess()
+
         except Exception as e:
             print(f"Error en validación: {e}")
             self.denyAccess()
 
     def requestAuth(self):
         self.setResponseCode(401)
-        self.setHeader(b'WWW-Authenticate', b'Basic realm="Proxy Privado - Introduce tu Key"')
-        self.write(b"Se requiere una Key/Licencia valida para usar este proxy.")
+        self.setHeader(b'WWW-Authenticate', b'Basic realm="Secure Proxy"')
+        self.write(b"Se requiere una Key/Licencia valida.")
         self.finish()
 
     def denyAccess(self):
         self.setResponseCode(403)
-        self.write(b"Key incorrecta, vencida o no autorizada.")
+        self.write(b"Key incorrecta, vencida o sin autorizacion.")
         self.finish()
 
 class SecureProxy(proxy.Proxy):
@@ -59,8 +66,8 @@ class SecureProxyFactory(http.HTTPFactory):
     def buildProtocol(self, addr):
         return SecureProxy()
 
-# Puerto donde escuchará el servidor
-PORT = 8080
-print(f"Servidor Proxy con Seguridad de Keys activo en el puerto {PORT}...")
-reactor.listenTCP(PORT, SecureProxyFactory())
-reactor.run()
+if __name__ == "__main__":
+    # El proxy correra localmente en el puerto 8080
+    reactor.listenTCP(8080, SecureProxyFactory())
+    print("Proxy seguro corriendo en el puerto 8080...")
+    reactor.run()
